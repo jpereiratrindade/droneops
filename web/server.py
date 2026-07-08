@@ -19,7 +19,7 @@ class DroneOpsHandler(http.server.SimpleHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description="DroneOps local HTTPS static server")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8021)
+    parser.add_argument("--port", type=int, default=8011)
     parser.add_argument("--directory", default=str(Path(__file__).resolve().parent))
     parser.add_argument("--ssl-keyfile", default="")
     parser.add_argument("--ssl-certfile", default="")

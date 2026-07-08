@@ -11,8 +11,16 @@ deploy/run_dev.sh
 O script compila o núcleo C++, roda os testes e sobe a interface em:
 
 ```text
-https://127.0.0.1:8780/
+https://127.0.0.1:8011/
 ```
+
+Ele também mostra o IP da máquina na rede local, por exemplo:
+
+```text
+https://10.x.x.x:8011/
+```
+
+Use `Ctrl+C` no terminal para parar o servidor de desenvolvimento.
 
 Use HTTPS porque GPS, câmera e QR Code no navegador dependem de contexto seguro em muitos celulares/navegadores.
 
@@ -38,8 +46,8 @@ Padrões:
 | `DRONEOPS_WIFI_SSID` | `DRONEOPS` |
 | `DRONEOPS_WIFI_PASSWORD` | `droneops5` |
 | `DRONEOPS_HOSTNAME` | `droneops` |
-| `DRONEOPS_PORT` | `8021` |
-| `DRONEOPS_QR_URL` | `https://droneops.local:8021/` |
+| `DRONEOPS_PORT` | `8011` |
+| `DRONEOPS_QR_URL` | `https://droneops.local:8011/` |
 | `DRONEOPS_UPDATE_REPO` | `git@github.com:jpereiratrindade/droneops.git` |
 
 Depois da instalação:
@@ -53,7 +61,7 @@ Acesso no celular:
 
 ```text
 Wi-Fi: DRONEOPS
-URL: https://droneops.local:8021/
+URL: https://droneops.local:8011/
 ```
 
 ## Upgrade

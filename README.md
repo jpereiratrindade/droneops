@@ -73,13 +73,13 @@ Servidor local:
 
 ```bash
 cd web
-python3 -m http.server 8780
+python3 -m http.server 8011
 ```
 
 Abra:
 
 ```text
-http://127.0.0.1:8780/
+http://127.0.0.1:8011/
 ```
 
 ## Fora de escopo
