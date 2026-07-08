@@ -1,0 +1,9 @@
+[Unit]
+Description=DroneOps safe updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/droneops-update --auto
+

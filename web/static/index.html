@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0a1628">
+  <title>DroneOps</title>
+  <meta name="description" content="Planejamento, checklist e CampoSync para missões com drones">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="app">
+  <header class="app-header">
+    <div class="logo">drone<span>ops</span></div>
+    <span class="version-badge">v0.1.0</span>
+    <div class="header-spacer"></div>
+    <span class="header-badge">CampoSync</span>
+  </header>
+
+  <main class="content">
+    <section class="mission-strip">
+      <div>
+        <div class="eyebrow">Missão ativa</div>
+        <h1>DO-001</h1>
+        <p>SISTER-CAMPO · CAMP-2026-001 · AREA-001</p>
+      </div>
+      <div class="status-pill" id="mission-status">planejada</div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-header">
+          <span class="card-title">Identificação</span>
+          <span class="header-badge soft">offline-first</span>
+        </div>
+        <div class="field-grid">
+          <label>Responsável<input id="responsible" value="responsavel_operacional"></label>
+          <label>ID operador<input id="operator-id" value="responsavel_operacional"></label>
+          <label>Aeronave<input id="aircraft" value="DRONE-001"></label>
+          <label>QR drone<input id="drone-qr" value="DRONE-001"></label>
+          <label>Sensor<input id="sensor" value="RGB-001"></label>
+          <label>Data<input id="date" type="date" value="2026-07-08"></label>
+        </div>
+        <div class="button-row">
+          <button class="btn btn-ghost btn-sm" onclick="startQrScan()">Ler QR</button>
+          <button class="btn btn-ghost btn-sm" onclick="stopQrScan()">Parar câmera</button>
+        </div>
+        <video id="qr-video" class="camera-preview" playsinline muted></video>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span class="card-title">CampoSync</span>
+          <button class="btn btn-primary btn-sm" onclick="generateManifest()">Gerar manifesto</button>
+        </div>
+        <div class="sync-box">
+          <div><span>Contrato</span><strong>0.1.0</strong></div>
+          <div><span>Validação</span><strong id="validation-status">rascunho</strong></div>
+          <div><span>Destino</span><strong>SisTer</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="card-header">
+          <span class="card-title">Checklist pré-voo</span>
+          <span id="pre-count" class="header-badge soft">0/5</span>
+        </div>
+        <div class="checklist" id="preflight"></div>
+      </article>
+
+      <article class="card">
+        <div class="card-header">
+          <span class="card-title">Checklist pós-voo</span>
+          <span id="post-count" class="header-badge soft">0/3</span>
+        </div>
+        <div class="checklist" id="postflight"></div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">Evidências e ocorrências</span>
+      </div>
+      <div class="field-grid wide">
+        <label>Arquivos de evidência<textarea id="evidence" placeholder="droneops/logs_voo/DO-001.log"></textarea></label>
+        <label>Ocorrências abertas<textarea id="occurrences" placeholder="falha, abortagem, risco observado..."></textarea></label>
+      </div>
+      <div class="field-grid wide">
+        <label>Fotos comprobatórias<input id="photos" type="file" accept="image/*" capture="environment" multiple></label>
+        <label>Decisão final
+          <select id="final-decision">
+            <option value="rascunho">Rascunho</option>
+            <option value="apto_para_voo">Apto para voo</option>
+            <option value="apto_com_restricao">Apto com restrição</option>
+            <option value="bloqueado">Bloqueado</option>
+          </select>
+        </label>
+      </div>
+      <div class="button-row">
+        <button class="btn btn-primary btn-sm" onclick="captureLocation()">Coletar GPS</button>
+        <span id="gps-status" class="gps-status">GPS não coletado</span>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <span class="card-title">Manifesto preliminar</span>
+      </div>
+      <pre id="manifest-preview">Clique em Gerar manifesto.</pre>
+    </section>
+  </main>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

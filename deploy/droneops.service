@@ -1,0 +1,27 @@
+[Unit]
+Description=DroneOps local protocol certification server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=droneops
+Group=droneops
+WorkingDirectory=/opt/droneops/web
+EnvironmentFile=/etc/droneops/droneops.env
+ExecStart=/usr/bin/python3 /opt/droneops/web/server.py \
+  --directory ${DRONEOPS_WEB_DIR} \
+  --host ${DRONEOPS_HOST} \
+  --port ${DRONEOPS_PORT} \
+  --ssl-keyfile ${DRONEOPS_SSL_KEY} \
+  --ssl-certfile ${DRONEOPS_SSL_CERT}
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/droneops
+
+[Install]
+WantedBy=multi-user.target
+

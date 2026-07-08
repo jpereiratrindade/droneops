@@ -1,0 +1,17 @@
+{
+  "package_id": "PKG-DRONEOPS-2026-0001",
+  "droneops_version": "0.1.0",
+  "camposync_contract_version": "0.1.0",
+  "camponode_id": "CAMPO-NODE-LOCAL",
+  "project_id": "SISTER-CAMPO",
+  "campaign_id": "CAMP-2026-001",
+  "area_id": "AREA-001",
+  "mission_id": "DO-001",
+  "origin_module": "droneops",
+  "human_responsible": "responsavel_operacional",
+  "validation_status": "rascunho",
+  "sync_status": "nao_sincronizado",
+  "expected_destination": "SisTer",
+  "files": []
+}
+
