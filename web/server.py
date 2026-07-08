@@ -6,6 +6,11 @@ from pathlib import Path
 
 
 class DroneOpsHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        if self.path in {"", "/"}:
+            self.path = "/static/index.html"
+        return super().do_GET()
+
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
@@ -38,4 +43,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

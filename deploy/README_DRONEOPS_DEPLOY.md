@@ -11,7 +11,7 @@ deploy/run_dev.sh
 O script compila o núcleo C++, roda os testes e sobe a interface em:
 
 ```text
-https://127.0.0.1:8780/static/
+https://127.0.0.1:8780/
 ```
 
 Use HTTPS porque GPS, câmera e QR Code no navegador dependem de contexto seguro em muitos celulares/navegadores.
@@ -39,7 +39,7 @@ Padrões:
 | `DRONEOPS_WIFI_PASSWORD` | `droneops5` |
 | `DRONEOPS_HOSTNAME` | `droneops` |
 | `DRONEOPS_PORT` | `8021` |
-| `DRONEOPS_QR_URL` | `https://droneops.local:8021/static/` |
+| `DRONEOPS_QR_URL` | `https://droneops.local:8021/` |
 | `DRONEOPS_UPDATE_REPO` | `git@github.com:jpereiratrindade/droneops.git` |
 
 Depois da instalação:
@@ -53,7 +53,7 @@ Acesso no celular:
 
 ```text
 Wi-Fi: DRONEOPS
-URL: https://droneops.local:8021/static/
+URL: https://droneops.local:8021/
 ```
 
 ## Upgrade
@@ -108,4 +108,3 @@ git tag v0.1.1
 git push origin main
 git push origin v0.1.1
 ```
-

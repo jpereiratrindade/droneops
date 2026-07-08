@@ -17,7 +17,7 @@ WIFI_PASSWORD="${DRONEOPS_WIFI_PASSWORD:-droneops5}"
 WIFI_IFACE="${DRONEOPS_WIFI_IFACE:-}"
 HOSTNAME_TARGET="${DRONEOPS_HOSTNAME:-droneops}"
 PORT="${DRONEOPS_PORT:-8021}"
-QR_URL="${DRONEOPS_QR_URL:-https://droneops.local:${PORT}/static/}"
+QR_URL="${DRONEOPS_QR_URL:-https://droneops.local:${PORT}/}"
 LOG_FILE="${STATE_DIR}/install.log"
 
 mkdir -p "${STATE_DIR}"
@@ -158,7 +158,7 @@ write_summary() {
     echo "Wi-Fi: ${SSID}"
     echo "Senha Wi-Fi: ${WIFI_PASSWORD}"
     echo "URL local: ${QR_URL}"
-    echo "URL por IP: https://${ip_addr}:${PORT}/static/"
+    echo "URL por IP: https://${ip_addr}:${PORT}/"
     echo "Serviço: sudo systemctl status droneops"
     echo "Atualização: sudo droneops-update"
   } | tee "${STATE_DIR}/droneops-info.txt"
@@ -179,4 +179,3 @@ main() {
 }
 
 main "$@"
-

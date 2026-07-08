@@ -12,8 +12,7 @@ python3 -m http.server 8780
 Abra:
 
 ```text
-http://127.0.0.1:8780/static/
+http://127.0.0.1:8780/
 ```
 
 Esta tela ainda nao substitui a API local. Ela serve para estabilizar o fluxo visual de missao, checklists, ocorrencias e manifesto CampoSync antes de portar o servidor web do MorfoCampo.
-

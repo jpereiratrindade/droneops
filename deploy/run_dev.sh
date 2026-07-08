@@ -20,11 +20,10 @@ if [[ ! -f "${CERT_DIR}/cert.pem" || ! -f "${CERT_DIR}/key.pem" ]]; then
     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 fi
 
-echo "DroneOps dev: https://${HOST}:${PORT}/static/"
+echo "DroneOps dev: https://${HOST}:${PORT}/"
 exec python3 "${REPO_ROOT}/web/server.py" \
   --directory "${REPO_ROOT}/web" \
   --host "${HOST}" \
   --port "${PORT}" \
   --ssl-keyfile "${CERT_DIR}/key.pem" \
   --ssl-certfile "${CERT_DIR}/cert.pem"
-

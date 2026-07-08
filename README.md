@@ -79,7 +79,7 @@ python3 -m http.server 8780
 Abra:
 
 ```text
-http://127.0.0.1:8780/static/
+http://127.0.0.1:8780/
 ```
 
 ## Fora de escopo
