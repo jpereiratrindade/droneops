@@ -44,13 +44,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(httplib)
 
-target_link_libraries(droneops_core PUBLIC sqlite3_static nlohmann_json::nlohmann_json httplib::httplib)
+find_package(OpenSSL REQUIRED)
+
+target_link_libraries(droneops_core PUBLIC sqlite3_static nlohmann_json::nlohmann_json httplib::httplib OpenSSL::SSL OpenSSL::Crypto)
 
 target_include_directories(droneops_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_compile_options(droneops_core PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(droneops_core PUBLIC CPPHTTPLIB_OPENSSL_SUPPORT)
 
 add_executable(droneops src/main.cpp)
 target_link_libraries(droneops PRIVATE droneops_core)

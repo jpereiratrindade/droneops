@@ -5,44 +5,58 @@
 #include <filesystem>
 #include <chrono>
 #include <iostream>
+#include <memory>
 
 using json = nlohmann::json;
 
 namespace droneops::server {
 
-WebServer::WebServer(droneops::sqlite::SqliteStore& store, const std::string& web_root)
+WebServer::WebServer(droneops::sqlite::SqliteStore& store, const std::string& web_root, const std::string& cert_path, const std::string& key_path)
     : store_(store), web_root_(web_root) {
+    if (!cert_path.empty() && !key_path.empty()) {
+        srv_ = std::make_unique<httplib::SSLServer>(cert_path.c_str(), key_path.c_str());
+        if (!srv_->is_valid()) {
+            std::cerr << "Erro ao carregar certificados SSL. Verifique os caminhos.\n";
+            exit(1);
+        }
+    } else {
+        srv_ = std::make_unique<httplib::Server>();
+    }
     setupRoutes();
 }
 
+WebServer::~WebServer() {}
+
 void WebServer::start(int port) {
-    std::cout << "Iniciando servidor web na porta " << port << "...\n";
-    std::cout << "Arquivos estaticos em: " << web_root_ << "\n";
-    std::cout << "Acesse: http://127.0.0.1:" << port << "\n";
-    srv_.listen("0.0.0.0", port);
+    std::cout << "DroneOps server listening on " << (dynamic_cast<httplib::SSLServer*>(srv_.get()) ? "https" : "http") << "://0.0.0.0:" << port << '\n';
+    srv_->listen("0.0.0.0", port);
 }
 
 void WebServer::stop() {
-    srv_.stop();
+    srv_->stop();
 }
 
 void WebServer::setupRoutes() {
-    // Servir diretorio estatico
-    auto ret = srv_.set_mount_point("/static", web_root_);
-    if (!ret) {
-        std::cerr << "Aviso: Nao foi possivel montar diretorio estatico: " << web_root_ << "\n";
-    }
+    srv_->set_mount_point("/static", web_root_);
 
-    srv_.Get("/", [this](const httplib::Request&, httplib::Response& res) {
-        res.set_redirect("/static/index.html");
+    srv_->Get("/", [this](const httplib::Request&, httplib::Response& res) {
+        std::filesystem::path index = std::filesystem::path(web_root_) / "index.html";
+        std::ifstream file(index);
+        if (file) {
+            std::ostringstream ss;
+            ss << file.rdbuf();
+            res.set_content(ss.str(), "text/html");
+        } else {
+            res.status = 404;
+        }
     });
 
-    srv_.Get("/api/version", [](const httplib::Request&, httplib::Response& res) {
-        res.set_content(R"({"version": "v0.3.1"})", "application/json");
+    srv_->Get("/api/version", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content(R"({"version": "v0.5.0"})", "application/json");
     });
 
     // Fase 4: Network Check (ping externo)
-    srv_.Get("/api/system/network", [](const httplib::Request&, httplib::Response& res) {
+    srv_->Get("/api/system/network", [](const httplib::Request&, httplib::Response& res) {
         // Tenta se conectar a um dominio super estavel e de rapida resposta para verificar internet
         httplib::Client cli("http://captive.apple.com");
         cli.set_connection_timeout(1, 0); // 1 segundo
@@ -54,44 +68,33 @@ void WebServer::setupRoutes() {
     });
 
     // API REST
-    srv_.Get(R"(/api/missions/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
+    srv_->Get(R"(/api/missions/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
         try {
             auto mission = store_.getMission(id);
-            json j;
-            j["mission_id"] = mission.mission_id;
-            j["project_id"] = mission.project_id;
-            j["campaign_id"] = mission.campaign_id;
-            j["area_id"] = mission.area_id;
-            j["responsible"] = mission.responsible;
-            j["operator_id"] = mission.operator_id;
-            j["aircraft_id"] = mission.aircraft_id;
-            j["drone_qr"] = mission.drone_qr;
-            j["sensor_id"] = mission.sensor_id;
-            j["planned_date"] = mission.planned_date;
-            j["evidence_paths"] = mission.evidence_paths;
-            j["occurrences"] = mission.occurrences;
-            j["final_decision"] = mission.final_decision;
+            json j = {
+                {"mission_id", mission.mission_id},
+                {"evidence_paths", mission.evidence_paths},
+                {"occurrences", mission.occurrences},
+                {"final_decision", mission.final_decision},
+                {"sync_status", mission.sync_status}
+            };
             
-            // preflight
-            j["preflight"] = json::array();
-            for (const auto& item : mission.preflight_checklist) {
-                j["preflight"].push_back(item.checked);
-            }
-            // postflight
-            j["postflight"] = json::array();
-            for (const auto& item : mission.postflight_checklist) {
-                j["postflight"].push_back(item.checked);
-            }
+            std::vector<bool> pre, post;
+            for(const auto& item : mission.preflight_checklist) pre.push_back(item.checked);
+            for(const auto& item : mission.postflight_checklist) post.push_back(item.checked);
+            j["preflight"] = pre;
+            j["postflight"] = post;
 
             res.set_content(j.dump(), "application/json");
         } catch (const std::exception& e) {
             res.status = 404;
-            res.set_content(R"({"error": "Nao encontrado"})", "application/json");
+            std::string err = std::string(R"({"error": ")") + e.what() + "\"}";
+            res.set_content(err, "application/json");
         }
     });
 
-    srv_.Post("/api/missions", [this](const httplib::Request& req, httplib::Response& res) {
+    srv_->Post("/api/missions", [this](const httplib::Request& req, httplib::Response& res) {
         try {
             auto j = json::parse(req.body);
             MissionRecord m;
@@ -133,7 +136,7 @@ void WebServer::setupRoutes() {
     });
 
     // Fase 5: Upload de Evidências (Fotos Físicas)
-    srv_.Post(R"(/api/missions/(.+)/evidence)", [this](const httplib::Request& req, httplib::Response& res) {
+    srv_->Post(R"(/api/missions/(.+)/evidence)", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
         try {
             auto mission = store_.getMission(id);
@@ -172,7 +175,7 @@ void WebServer::setupRoutes() {
     });
 
     // Fase 4: Empacotamento
-    srv_.Post(R"(/api/missions/(.+)/package)", [this](const httplib::Request& req, httplib::Response& res) {
+    srv_->Post(R"(/api/missions/(.+)/package)", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
         try {
             auto mission = store_.getMission(id);
@@ -192,7 +195,7 @@ void WebServer::setupRoutes() {
     });
 
     // Fase 4: Sincronização Simulada (Upload)
-    srv_.Post("/api/system/sync", [this](const httplib::Request&, httplib::Response& res) {
+    srv_->Post("/api/system/sync", [this](const httplib::Request&, httplib::Response& res) {
         try {
             // Pega todas as missoes
             auto missions = store_.getAllMissions();

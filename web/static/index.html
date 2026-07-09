@@ -100,7 +100,13 @@
         <label>Ocorrências abertas<textarea id="occurrences" placeholder="falha, abortagem, risco observado..."></textarea></label>
       </div>
       <div class="field-grid wide">
-        <label>Fotos comprobatórias<input id="photos" type="file" accept="image/*" capture="environment" multiple></label>
+        <div class="file-upload-wrapper">
+          <label>Fotos comprobatórias</label>
+          <label for="photos" class="btn btn-ghost" style="display:inline-flex; align-items:center; gap:0.5rem; width:100%; justify-content:center; margin-top:0.5rem; cursor:pointer;">
+            📸 Capturar Evidências
+          </label>
+          <input id="photos" type="file" accept="image/*" capture="environment" multiple style="display:none;">
+        </div>
         <label>Decisão final
           <select id="final-decision">
             <option value="rascunho">Rascunho</option>

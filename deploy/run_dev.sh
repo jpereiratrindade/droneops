@@ -27,9 +27,11 @@ fi
 echo "DroneOps dev local: https://localhost:${PORT}/"
 echo "DroneOps dev rede : https://${LAN_IP}:${PORT}/"
 echo "Pressione Ctrl+C para parar."
-exec python3 "${REPO_ROOT}/web/server.py" \
-  --directory "${REPO_ROOT}/web" \
-  --host "${HOST}" \
+
+# Roda o servidor C++ com suporte nativo a HTTPS (ADR-003: Removida dependência do Python)
+exec "${REPO_ROOT}/build/droneops" serve \
+  --db "${REPO_ROOT}/build/droneops_dev.db" \
+  --web "${REPO_ROOT}/web/static" \
   --port "${PORT}" \
-  --ssl-keyfile "${CERT_DIR}/key.pem" \
-  --ssl-certfile "${CERT_DIR}/cert.pem"
+  --cert "${CERT_DIR}/cert.pem" \
+  --key "${CERT_DIR}/key.pem"

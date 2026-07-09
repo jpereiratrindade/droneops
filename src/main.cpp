@@ -24,7 +24,7 @@ void printHelp() {
         << "  droneops validate --input missao_DO001/droneops/missoes.csv --out missao_DO001/validacao\n"
         << "  droneops validate --db missao_DO001/droneops.db --out missao_DO001/validacao\n"
         << "  droneops package --dir missao_DO001 --mission DO-001 --out missao_DO001/pacote [--db missao_DO001/droneops.db]\n"
-        << "  droneops serve --db missao_DO001/droneops.db --web web/static --port 8011\n"
+        << "  droneops serve --db missao_DO001/droneops.db --web web/static --port 8011 [--cert cert.pem --key key.pem]\n"
         << "  droneops help\n\n"
         << "O DroneOps registra operacao e evidencias, mas nao substitui autorizacao, norma ou "
         << "responsavel humano.\n";
@@ -270,6 +270,8 @@ int runServe(const std::vector<std::string>& args) {
     const auto db_arg = optionValue(args, "--db");
     const auto web_arg = optionValue(args, "--web");
     const auto port_arg = optionValue(args, "--port");
+    const auto cert_arg = optionValue(args, "--cert");
+    const auto key_arg = optionValue(args, "--key");
 
     if (db_arg.empty() || web_arg.empty()) {
         throw std::runtime_error("serve requer --db e --web");
@@ -280,7 +282,7 @@ int runServe(const std::vector<std::string>& args) {
     droneops::sqlite::SqliteStore store(db_arg);
     store.initSchema();
 
-    droneops::server::WebServer server(store, web_arg);
+    droneops::server::WebServer server(store, web_arg, cert_arg, key_arg);
     server.start(port);
 
     return 0;

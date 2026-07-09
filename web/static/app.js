@@ -189,15 +189,10 @@ async function loadDraft() {
          showToast(`Missão ${missionId} carregada do servidor local.`, 'success');
       }
       
-      // Ajuste automático da versão do sistema
-      fetch('/api/version').then(v => v.json()).then(vd => {
-        if(vd.version) document.getElementById('app-version').textContent = vd.version;
-      }).catch(e => console.warn('Erro ao ler versão', e));
-      
       return;
     }
   } catch (e) {
-    console.warn('Backend inativo, tentando localStorage...');
+    console.warn('Backend inativo ou missão não encontrada, tentando localStorage...');
   }
 
   // Fallback: localStorage
@@ -231,6 +226,11 @@ async function loadDraft() {
     }
   }
 }
+
+// Carrega a versão da API na inicialização
+fetch('/api/version').then(v => v.json()).then(vd => {
+  if(vd.version) document.getElementById('app-version').textContent = vd.version;
+}).catch(e => console.warn('Erro ao ler versão', e));
 
 async function generateManifest() {
   const syncStat = document.getElementById('sync-status').textContent;
@@ -405,6 +405,17 @@ document.addEventListener('input', () => {
 document.addEventListener('change', () => {
   updateStatus();
   saveDraft();
+});
+
+document.getElementById('photos').addEventListener('change', (e) => {
+  const label = document.querySelector('label[for="photos"]');
+  if(e.target.files.length > 0) {
+    label.innerHTML = `📸 ${e.target.files.length} Evidência(s) selecionada(s)`;
+    label.classList.replace('btn-ghost', 'btn-primary');
+  } else {
+    label.innerHTML = `📸 Capturar Evidências`;
+    label.classList.replace('btn-primary', 'btn-ghost');
+  }
 });
 
 updateStatus();
