@@ -176,6 +176,12 @@ async function loadDraft() {
 
       updateStatus();
       showToast(`Missão ${missionId} carregada do servidor local.`, 'success');
+      
+      // Ajuste automático da versão do sistema
+      fetch('/api/version').then(v => v.json()).then(vd => {
+        if(vd.version) document.getElementById('app-version').textContent = vd.version;
+      }).catch(e => console.warn('Erro ao ler versão', e));
+      
       return;
     }
   } catch (e) {
@@ -254,6 +260,13 @@ function generateManifest() {
 
 function captureLocation() {
   const target = document.getElementById('gps-status');
+  
+  if (!window.isSecureContext) {
+    target.textContent = 'Bloqueado (HTTPS exigido)';
+    showToast('No iOS ou Android modernos, o GPS exige conexão HTTPS (segura) ou localhost.', 'error');
+    return;
+  }
+
   if (!navigator.geolocation) {
     target.textContent = 'GPS indisponível neste navegador';
     return;
@@ -277,8 +290,14 @@ function captureLocation() {
 
 async function startQrScan() {
   const video = document.getElementById('qr-video');
+  
+  if (!window.isSecureContext) {
+    alert('Bloqueado pela segurança do iOS/Navegador: O acesso à câmera exige HTTPS (conexão segura) ou acesso via localhost (127.0.0.1).');
+    return;
+  }
+
   if (!('BarcodeDetector' in window)) {
-    alert('Leitura automática de QR não disponível neste navegador. Preencha o campo QR drone manualmente.');
+    alert('Leitura automática de QR não disponível neste navegador (ou requer ativação). Preencha o campo QR drone manualmente.');
     return;
   }
   qrDetector = new BarcodeDetector({ formats: ['qr_code'] });

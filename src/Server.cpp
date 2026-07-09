@@ -33,6 +33,10 @@ void WebServer::setupRoutes() {
         res.set_redirect("/static/index.html");
     });
 
+    srv_.Get("/api/version", [](const httplib::Request&, httplib::Response& res) {
+        res.set_content(R"({"version": "v0.3.0"})", "application/json");
+    });
+
     // API REST
     srv_.Get(R"(/api/missions/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];
