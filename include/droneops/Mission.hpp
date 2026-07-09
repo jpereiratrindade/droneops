@@ -70,6 +70,7 @@ struct MissionRecord {
     std::string occurrences;
     std::string notes;
     std::string status_text{"rascunho"};
+    std::string sync_status{"nao_sincronizado"};
 
     std::vector<ChecklistItem> preflight_checklist;
     std::vector<ChecklistItem> postflight_checklist;

@@ -64,7 +64,11 @@
         <div class="sync-box">
           <div><span>Contrato</span><strong>0.1.0</strong></div>
           <div><span>Validação</span><strong id="validation-status">rascunho</strong></div>
-          <div><span>Destino</span><strong>SisTer</strong></div>
+          <div><span>Sincronização</span><strong id="sync-status">não sincronizado</strong></div>
+          <div><span>Rede Externa</span><strong id="network-status" style="color: #ff4444;">Offline</strong></div>
+        </div>
+        <div class="button-row" style="margin-top: 1rem;">
+          <button id="btn-sync" class="btn btn-primary btn-sm" onclick="syncCloud()" disabled>Sincronizar com Observa</button>
         </div>
       </article>
     </section>

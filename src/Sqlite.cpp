@@ -51,6 +51,7 @@ void SqliteStore::initSchema() {
             occurrences TEXT,
             notes TEXT,
             status_text TEXT,
+            sync_status TEXT,
             preflight_json TEXT,
             postflight_json TEXT
         );
@@ -92,9 +93,9 @@ void SqliteStore::saveMission(const MissionRecord& r) {
             responsible, pilot, observer, aircraft_id, sensor_id, battery_ids, weather,
             authorization_ref, operator_id, drone_qr, aro_ref, gps_latitude, gps_longitude,
             gps_accuracy_m, photo_paths, final_decision, flight_plan_path, map_path,
-            evidence_paths, flight_log_paths, occurrences, notes, status_text,
+            evidence_paths, flight_log_paths, occurrences, notes, status_text, sync_status,
             preflight_json, postflight_json
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
     )";
 
     sqlite3_stmt* stmt;
@@ -132,11 +133,12 @@ void SqliteStore::saveMission(const MissionRecord& r) {
     sqlite3_bind_text(stmt, 28, r.occurrences.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 29, r.notes.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 30, r.status_text.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 31, r.sync_status.c_str(), -1, SQLITE_STATIC);
 
     std::string pre = serializeChecklist(r.preflight_checklist);
     std::string pos = serializeChecklist(r.postflight_checklist);
-    sqlite3_bind_text(stmt, 31, pre.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 32, pos.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 32, pre.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 33, pos.c_str(), -1, SQLITE_TRANSIENT);
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         sqlite3_finalize(stmt);
@@ -190,9 +192,10 @@ std::vector<MissionRecord> SqliteStore::getAllMissions() {
         r.occurrences = get_str(stmt, 27);
         r.notes = get_str(stmt, 28);
         r.status_text = get_str(stmt, 29);
+        r.sync_status = get_str(stmt, 30);
         
-        r.preflight_checklist = deserializeChecklist(get_str(stmt, 30));
-        r.postflight_checklist = deserializeChecklist(get_str(stmt, 31));
+        r.preflight_checklist = deserializeChecklist(get_str(stmt, 31));
+        r.postflight_checklist = deserializeChecklist(get_str(stmt, 32));
 
         result.push_back(r);
     }
@@ -245,9 +248,10 @@ MissionRecord SqliteStore::getMission(const std::string& mission_id) {
         r.occurrences = get_str(stmt, 27);
         r.notes = get_str(stmt, 28);
         r.status_text = get_str(stmt, 29);
+        r.sync_status = get_str(stmt, 30);
         
-        r.preflight_checklist = deserializeChecklist(get_str(stmt, 30));
-        r.postflight_checklist = deserializeChecklist(get_str(stmt, 31));
+        r.preflight_checklist = deserializeChecklist(get_str(stmt, 31));
+        r.postflight_checklist = deserializeChecklist(get_str(stmt, 32));
     } else {
         throw std::runtime_error("Missão não encontrada: " + mission_id);
     }

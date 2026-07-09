@@ -1,5 +1,9 @@
 #include "droneops/Server.hpp"
+#include "droneops/Package.hpp"
 #include <nlohmann/json.hpp>
+#include <iostream>
+#include <filesystem>
+#include <chrono>
 #include <iostream>
 
 using json = nlohmann::json;
@@ -34,7 +38,19 @@ void WebServer::setupRoutes() {
     });
 
     srv_.Get("/api/version", [](const httplib::Request&, httplib::Response& res) {
-        res.set_content(R"({"version": "v0.3.0"})", "application/json");
+        res.set_content(R"({"version": "v0.3.1"})", "application/json");
+    });
+
+    // Fase 4: Network Check (ping externo)
+    srv_.Get("/api/system/network", [](const httplib::Request&, httplib::Response& res) {
+        // Tenta se conectar a um dominio super estavel e de rapida resposta para verificar internet
+        httplib::Client cli("http://captive.apple.com");
+        cli.set_connection_timeout(1, 0); // 1 segundo
+        cli.set_read_timeout(1, 0);
+        auto cli_res = cli.Get("/generate_204");
+        
+        bool is_online = (cli_res && cli_res->status == 200);
+        res.set_content(is_online ? R"({"online": true})" : R"({"online": false})", "application/json");
     });
 
     // API REST
@@ -113,6 +129,48 @@ void WebServer::setupRoutes() {
             res.status = 400;
             std::string err = std::string(R"({"error": ")") + e.what() + "\"}";
             res.set_content(err, "application/json");
+        }
+    });
+
+    // Fase 4: Empacotamento
+    srv_.Post(R"(/api/missions/(.+)/package)", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string id = req.matches[1];
+        try {
+            auto mission = store_.getMission(id);
+            std::filesystem::path out_dir = "out/pacotes_prontos/" + id;
+            droneops::package::writeMissionPackage(".", out_dir, mission);
+            
+            // Marca como pendente de sincronizacao
+            mission.sync_status = "pendente_sincronizacao";
+            store_.saveMission(mission);
+
+            res.set_content(R"({"status": "packaged", "path": ")" + out_dir.string() + "\"}", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 404;
+            std::string err = std::string(R"({"error": ")") + e.what() + "\"}";
+            res.set_content(err, "application/json");
+        }
+    });
+
+    // Fase 4: Sincronização Simulada (Upload)
+    srv_.Post("/api/system/sync", [this](const httplib::Request&, httplib::Response& res) {
+        try {
+            // Pega todas as missoes
+            auto missions = store_.getAllMissions();
+            int synced = 0;
+            for(auto& m : missions) {
+                if(m.sync_status == "pendente_sincronizacao") {
+                    // Aqui faria o POST real do pacote ZIP para o SISTER-Observa
+                    // Vamos simular sucesso
+                    m.sync_status = "sincronizado";
+                    store_.saveMission(m);
+                    synced++;
+                }
+            }
+            res.set_content("{\"synced\": " + std::to_string(synced) + "}", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            res.set_content(R"({"error": "Falha na sincronizacao"})", "application/json");
         }
     });
 }

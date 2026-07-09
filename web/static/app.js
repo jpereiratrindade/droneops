@@ -167,6 +167,7 @@ async function loadDraft() {
       document.getElementById('evidence').value = data.evidence_paths || '';
       document.getElementById('occurrences').value = data.occurrences || '';
       document.getElementById('final-decision').value = data.final_decision || 'rascunho';
+      document.getElementById('sync-status').textContent = (data.sync_status || 'nao_sincronizado').replace('_', ' ');
 
       const pres = document.querySelectorAll('input[data-group="preflight"]');
       (data.preflight || []).forEach((checked, i) => { if (pres[i]) pres[i].checked = checked; });
@@ -220,43 +221,68 @@ async function loadDraft() {
   }
 }
 
-function generateManifest() {
+async function generateManifest() {
   const status = updateStatus();
   const blocked = status === 'bloqueada';
-  const photos = [...document.getElementById('photos').files].map(file => `evidencias/fotos/${file.name}`);
-  const manifest = {
-    package_id: 'PKG-DRONEOPS-DO-001',
-    droneops_version: '0.1.0',
-    camposync_contract_version: '0.1.0',
-    camponode_id: 'CAMPO-NODE-LOCAL',
-    project_id: 'SISTER-CAMPO',
-    campaign_id: 'CAMP-2026-001',
-    area_id: 'AREA-001',
-    mission_id: 'DO-001',
-    origin_module: 'droneops',
-    human_responsible: document.getElementById('responsible').value,
-    aircraft_id: document.getElementById('aircraft').value,
-    sensor_id: document.getElementById('sensor').value,
-    protocol: {
-      schema: 'droneops.protocol_certificate.v1',
-      operator_id: document.getElementById('operator-id').value,
-      drone_qr: document.getElementById('drone-qr').value,
-      latitude: lastPosition?.coords.latitude ?? null,
-      longitude: lastPosition?.coords.longitude ?? null,
-      accuracy_m: lastPosition?.coords.accuracy ?? null,
-      final_decision: document.getElementById('final-decision').value,
-      photo_paths: photos
-    },
-    validation_status: blocked ? 'bloqueado' : 'rascunho',
-    sync_status: 'nao_sincronizado',
-    expected_destination: 'SisTer',
-    mission_status: status,
-    files: []
-  };
-  document.getElementById('manifest-preview').textContent = JSON.stringify(manifest, null, 2);
-  saveDraft();
-  showToast('Manifesto preliminar atualizado', 'success');
+  saveDraft(); // Garante salvamento no SQLite
+
+  const missionId = document.getElementById('mission').value;
+  if(!missionId) return showToast('Missão inválida', 'error');
+
+  showToast('Empacotando missão localmente...', 'info');
+  try {
+    const res = await fetch(`/api/missions/${missionId}/package`, { method: 'POST' });
+    if(res.ok) {
+      document.getElementById('sync-status').textContent = 'pendente sincronizacao';
+      showToast('Pacote CampoSync gerado e pendente de sincronização.', 'success');
+      document.getElementById('manifest-preview').textContent = "Pacote salvo localmente no dispositivo.";
+    } else {
+      throw new Error('Falha no empacotamento');
+    }
+  } catch(e) {
+    showToast('Erro ao gerar pacote.', 'error');
+  }
 }
+
+async function syncCloud() {
+  showToast('Sincronizando com SISTER-Observa...', 'info');
+  try {
+    const res = await fetch('/api/system/sync', { method: 'POST' });
+    if(res.ok) {
+      const data = await res.json();
+      showToast(`${data.synced} missão(ões) enviada(s) para a nuvem!`, 'success');
+      loadDraft(); // Recarrega status
+    } else {
+      throw new Error('Erro na sincronização');
+    }
+  } catch(e) {
+    showToast('Falha ao enviar pacotes.', 'error');
+  }
+}
+
+async function checkNetwork() {
+  try {
+    const res = await fetch('/api/system/network');
+    const data = await res.json();
+    const netStatus = document.getElementById('network-status');
+    const btnSync = document.getElementById('btn-sync');
+    if(data.online) {
+      netStatus.textContent = 'Online';
+      netStatus.style.color = '#22c55e';
+      btnSync.disabled = false;
+    } else {
+      netStatus.textContent = 'Offline';
+      netStatus.style.color = '#ff4444';
+      btnSync.disabled = true;
+    }
+  } catch(e) {
+    // Falha na API
+  }
+}
+
+// Pooling rede a cada 10s
+setInterval(checkNetwork, 10000);
+checkNetwork();
 
 function captureLocation() {
   const target = document.getElementById('gps-status');
