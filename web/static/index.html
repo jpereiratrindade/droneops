@@ -8,6 +8,8 @@
   <meta name="theme-color" content="#0a1628">
   <title>DroneOps</title>
   <meta name="description" content="Planejamento, checklist e CampoSync para missões com drones">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a1628'/%3E%3Ctext x='50' y='50' font-family='sans-serif' font-size='40' font-weight='bold' fill='%2322c55e' text-anchor='middle' dominant-baseline='central'%3EDO%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -23,8 +25,8 @@
     <section class="mission-strip">
       <div>
         <div class="eyebrow">Missão ativa</div>
-        <h1>DO-001</h1>
-        <p>SISTER-CAMPO · CAMP-2026-001 · AREA-001</p>
+        <h1 id="display-mission-id">Nova Missão</h1>
+        <p id="display-mission-context">Projeto · Campanha · Área</p>
       </div>
       <div class="status-pill" id="mission-status">planejada</div>
     </section>
@@ -36,12 +38,16 @@
           <span class="header-badge soft">offline-first</span>
         </div>
         <div class="field-grid">
-          <label>Responsável<input id="responsible" value="responsavel_operacional"></label>
-          <label>ID operador<input id="operator-id" value="responsavel_operacional"></label>
-          <label>Aeronave<input id="aircraft" value="DRONE-001"></label>
-          <label>QR drone<input id="drone-qr" value="DRONE-001"></label>
-          <label>Sensor<input id="sensor" value="RGB-001"></label>
-          <label>Data<input id="date" type="date" value="2026-07-08"></label>
+          <label>Projeto<input id="project" value="SISTER-CAMPO"></label>
+          <label>Campanha<input id="campaign" value="CAMP-2026-001"></label>
+          <label>Área<input id="area" value="AREA-001"></label>
+          <label>Missão<input id="mission" value="DO-001"></label>
+          <label>Responsável<input id="responsible" value=""></label>
+          <label>ID operador<input id="operator-id" value=""></label>
+          <label>Aeronave<input id="aircraft" value=""></label>
+          <label>QR drone<input id="drone-qr" value=""></label>
+          <label>Sensor<input id="sensor" value=""></label>
+          <label>Data<input id="date" type="date" value=""></label>
         </div>
         <div class="button-row">
           <button class="btn btn-ghost btn-sm" onclick="startQrScan()">Ler QR</button>
@@ -114,6 +120,16 @@
     </section>
   </main>
 </div>
+<div id="toast-container" class="toast-container"></div>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/sw.js')
+        .then(reg => console.log('ServiceWorker registrado com escopo:', reg.scope))
+        .catch(err => console.error('Falha ao registrar ServiceWorker:', err));
+    });
+  }
+</script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(droneops VERSION 0.1.0 LANGUAGES CXX)
+project(droneops VERSION 0.1.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -11,7 +11,25 @@ add_library(droneops_core
     src/Mission.cpp
     src/Package.cpp
     src/Validator.cpp
+    src/Sqlite.cpp
 )
+
+include(FetchContent)
+FetchContent_Declare(
+    sqlite3
+    URL https://sqlite.org/2024/sqlite-amalgamation-3450100.zip
+    URL_HASH SHA256=5592243caf28b2cdef41e6ab58d25d653dfc53deded8450eb66072c929f030c4
+)
+FetchContent_MakeAvailable(sqlite3)
+
+# sqlite-amalgamation doesn't provide a CMake target directly by default,
+# so we compile it as a static library
+add_library(sqlite3_static STATIC 
+    ${sqlite3_SOURCE_DIR}/sqlite3.c
+)
+target_include_directories(sqlite3_static PUBLIC ${sqlite3_SOURCE_DIR})
+
+target_link_libraries(droneops_core PUBLIC sqlite3_static)
 
 target_include_directories(droneops_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -36,6 +54,10 @@ add_test(NAME test_validator COMMAND test_validator)
 add_executable(test_package tests/test_package.cpp)
 target_link_libraries(test_package PRIVATE droneops_core)
 add_test(NAME test_package COMMAND test_package)
+
+add_executable(test_sqlite tests/test_sqlite.cpp)
+target_link_libraries(test_sqlite PRIVATE droneops_core)
+add_test(NAME test_sqlite COMMAND test_sqlite)
 
 add_test(
     NAME test_cli_init_mission

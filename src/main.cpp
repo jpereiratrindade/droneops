@@ -1,5 +1,6 @@
 #include "droneops/Csv.hpp"
 #include "droneops/Package.hpp"
+#include "droneops/Sqlite.hpp"
 #include "droneops/Validator.hpp"
 
 #include <filesystem>
@@ -18,12 +19,13 @@ void printHelp() {
         << "  droneops init --dir examples\n"
         << "  droneops init-mission --dir missao_DO001 --project SISTER-CAMPO --campaign CAMP-2026-001 "
            "--area AREA-001 --mission DO-001 --responsible \"Nome\" --aircraft DRONE-001 "
-           "[--sensor RGB-001]\n"
+           "[--db missao_DO001/droneops.db]\n"
         << "  droneops validate --input missao_DO001/droneops/missoes.csv --out missao_DO001/validacao\n"
-        << "  droneops package --dir missao_DO001 --mission DO-001 --out missao_DO001/pacote\n"
+        << "  droneops validate --db missao_DO001/droneops.db --out missao_DO001/validacao\n"
+        << "  droneops package --dir missao_DO001 --mission DO-001 --out missao_DO001/pacote [--db missao_DO001/droneops.db]\n"
         << "  droneops help\n\n"
         << "O DroneOps registra operacao e evidencias, mas nao substitui autorizacao, norma ou "
-           "responsavel humano.\n";
+        << "responsavel humano.\n";
 }
 
 std::string optionValue(const std::vector<std::string>& args, const std::string& name) {
@@ -113,6 +115,7 @@ int runInitMission(const std::vector<std::string>& args) {
     const auto responsible = optionValue(args, "--responsible");
     const auto aircraft = optionValue(args, "--aircraft");
     const auto sensor = optionValue(args, "--sensor");
+    const auto db_arg = optionValue(args, "--db");
 
     if (dir_arg.empty() || project.empty() || campaign.empty() || area.empty() || mission_id.empty()
         || responsible.empty() || aircraft.empty()) {
@@ -147,7 +150,15 @@ int runInitMission(const std::vector<std::string>& args) {
     mission.flight_plan_path = "droneops/planos_voo/" + mission_id + ".plan";
     mission.map_path = "droneops/mapas/" + mission_id + ".geojson";
 
-    droneops::csv::writeMissionsCsv(dir / "droneops" / "missoes.csv", {mission});
+    if (!db_arg.empty()) {
+        droneops::sqlite::SqliteStore store(db_arg);
+        store.initSchema();
+        store.saveMission(mission);
+        std::cout << "Banco SQLite inicializado em " << db_arg << '\n';
+    } else {
+        droneops::csv::writeMissionsCsv(dir / "droneops" / "missoes.csv", {mission});
+        std::cout << "Planilha gerada em: " << (dir / "droneops" / "missoes.csv") << '\n';
+    }
 
     writeTextFile(dir / "droneops" / "checklists" / (mission_id + "_pre_voo.md"),
                   "# Checklist pre-voo\n\n"
@@ -176,36 +187,47 @@ int runInitMission(const std::vector<std::string>& args) {
                   "4. Preencha a decisao final em `droneops/missoes.csv`.\n\n"
                   "## Validar\n\n"
                   "```sh\n"
-                  "droneops validate --input " + (dir / "droneops" / "missoes.csv").string()
+                  "droneops validate " + (!db_arg.empty() ? "--db " + db_arg : "--input " + (dir / "droneops" / "missoes.csv").string())
                       + " --out " + (dir / "validacao").string() + "\n"
                   "```\n\n"
                   "## Gerar pacote CampoSync\n\n"
                   "```sh\n"
                   "droneops package --dir " + dir.string() + " --mission " + mission_id
-                      + " --out " + (dir / "pacote").string() + "\n"
+                      + (!db_arg.empty() ? " --db " + db_arg : "") + " --out " + (dir / "pacote").string() + "\n"
                   "```\n");
 
     std::cout << "Missao DroneOps inicializada em " << dir << '\n';
-    std::cout << "Planilha: " << (dir / "droneops" / "missoes.csv") << '\n';
     return 0;
 }
 
 int runValidate(const std::vector<std::string>& args) {
     const auto input = optionValue(args, "--input");
+    const auto db_arg = optionValue(args, "--db");
     const auto out_dir = optionValue(args, "--out");
-    if (input.empty() || out_dir.empty()) {
-        throw std::runtime_error("validate requer --input e --out");
+    if ((input.empty() && db_arg.empty()) || out_dir.empty()) {
+        throw std::runtime_error("validate requer --input ou --db, e --out");
     }
 
-    auto read = droneops::csv::readMissions(input);
-    auto issues = droneops::validator::validateMissions(read.records);
-    issues.insert(issues.begin(), read.issues.begin(), read.issues.end());
+    std::vector<droneops::MissionRecord> records;
+    std::vector<droneops::ValidationIssue> issues;
+
+    if (!db_arg.empty()) {
+        droneops::sqlite::SqliteStore store(db_arg);
+        records = store.getAllMissions();
+    } else {
+        auto read = droneops::csv::readMissions(input);
+        records = read.records;
+        issues.insert(issues.begin(), read.issues.begin(), read.issues.end());
+    }
+
+    auto domain_issues = droneops::validator::validateMissions(records);
+    issues.insert(issues.end(), domain_issues.begin(), domain_issues.end());
 
     const std::filesystem::path out_path(out_dir);
     std::filesystem::create_directories(out_path);
-    droneops::csv::writeMissionsCsv(out_path / "missoes_normalizadas.csv", read.records);
-    droneops::csv::writeMissionsJsonl(out_path / "missoes_normalizadas.jsonl", read.records);
-    writeValidationReport(out_path / "relatorio_validacao.md", read.records, issues);
+    droneops::csv::writeMissionsCsv(out_path / "missoes_normalizadas.csv", records);
+    droneops::csv::writeMissionsJsonl(out_path / "missoes_normalizadas.jsonl", records);
+    writeValidationReport(out_path / "relatorio_validacao.md", records, issues);
 
     std::cout << "Validacao DroneOps concluida em " << out_path << '\n';
     return 0;
@@ -214,14 +236,24 @@ int runValidate(const std::vector<std::string>& args) {
 int runPackage(const std::vector<std::string>& args) {
     const auto dir_arg = optionValue(args, "--dir");
     const auto mission_id = optionValue(args, "--mission");
+    const auto db_arg = optionValue(args, "--db");
     const auto out_arg = optionValue(args, "--out");
     if (dir_arg.empty() || mission_id.empty() || out_arg.empty()) {
         throw std::runtime_error("package requer --dir, --mission e --out");
     }
 
     const std::filesystem::path dir(dir_arg);
-    auto read = droneops::csv::readMissions(dir / "droneops" / "missoes.csv");
-    for (const auto& mission : read.records) {
+    std::vector<droneops::MissionRecord> records;
+
+    if (!db_arg.empty()) {
+        droneops::sqlite::SqliteStore store(db_arg);
+        records = store.getAllMissions();
+    } else {
+        auto read = droneops::csv::readMissions(dir / "droneops" / "missoes.csv");
+        records = read.records;
+    }
+
+    for (const auto& mission : records) {
         if (mission.mission_id == mission_id) {
             droneops::package::writeMissionPackage(dir, out_arg, mission);
             std::cout << "Pacote CampoSync gerado em " << out_arg << '\n';

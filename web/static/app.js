@@ -17,6 +17,20 @@ let qrStream = null;
 let qrDetector = null;
 let qrTimer = null;
 
+// --- Toasts ---
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add('fade-out');
+    toast.addEventListener('animationend', () => toast.remove());
+  }, 3000);
+}
+
 function renderChecklist(id, items) {
   const root = document.getElementById(id);
   root.innerHTML = '';
@@ -61,7 +75,74 @@ function updateStatus() {
   }
   status.textContent = label;
   document.getElementById('validation-status').textContent = occurrences ? 'bloqueado' : 'rascunho';
+
+  // Atualizar cabeçalho
+  const missionId = document.getElementById('mission').value || 'Nova Missão';
+  document.getElementById('display-mission-id').textContent = missionId;
+  const proj = document.getElementById('project').value || 'Projeto';
+  const camp = document.getElementById('campaign').value || 'Campanha';
+  const area = document.getElementById('area').value || 'Área';
+  document.getElementById('display-mission-context').textContent = `${proj} · ${camp} · ${area}`;
+
   return label;
+}
+
+// --- LocalStorage persistence ---
+function saveDraft() {
+  const missionId = document.getElementById('mission').value || 'draft';
+  const payload = {
+    project: document.getElementById('project').value,
+    campaign: document.getElementById('campaign').value,
+    area: document.getElementById('area').value,
+    mission: document.getElementById('mission').value,
+    responsible: document.getElementById('responsible').value,
+    operatorId: document.getElementById('operator-id').value,
+    aircraft: document.getElementById('aircraft').value,
+    droneQr: document.getElementById('drone-qr').value,
+    sensor: document.getElementById('sensor').value,
+    date: document.getElementById('date').value,
+    evidence: document.getElementById('evidence').value,
+    occurrences: document.getElementById('occurrences').value,
+    finalDecision: document.getElementById('final-decision').value,
+    preflight: [...document.querySelectorAll('input[data-group="preflight"]')].map(i => i.checked),
+    postflight: [...document.querySelectorAll('input[data-group="postflight"]')].map(i => i.checked)
+  };
+  localStorage.setItem(`droneops_draft_${missionId}`, JSON.stringify(payload));
+  // Save last edited mission id
+  localStorage.setItem('droneops_last_mission', missionId);
+}
+
+function loadDraft() {
+  const missionId = localStorage.getItem('droneops_last_mission') || 'DO-001';
+  const saved = localStorage.getItem(`droneops_draft_${missionId}`);
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      document.getElementById('project').value = data.project || '';
+      document.getElementById('campaign').value = data.campaign || '';
+      document.getElementById('area').value = data.area || '';
+      document.getElementById('mission').value = data.mission || '';
+      document.getElementById('responsible').value = data.responsible || '';
+      document.getElementById('operator-id').value = data.operatorId || '';
+      document.getElementById('aircraft').value = data.aircraft || '';
+      document.getElementById('drone-qr').value = data.droneQr || '';
+      document.getElementById('sensor').value = data.sensor || '';
+      document.getElementById('date').value = data.date || '';
+      document.getElementById('evidence').value = data.evidence || '';
+      document.getElementById('occurrences').value = data.occurrences || '';
+      document.getElementById('final-decision').value = data.finalDecision || 'rascunho';
+
+      const pres = document.querySelectorAll('input[data-group="preflight"]');
+      (data.preflight || []).forEach((checked, i) => { if (pres[i]) pres[i].checked = checked; });
+
+      const posts = document.querySelectorAll('input[data-group="postflight"]');
+      (data.postflight || []).forEach((checked, i) => { if (posts[i]) posts[i].checked = checked; });
+
+      showToast(`Rascunho da missão ${missionId} carregado.`, 'success');
+    } catch (e) {
+      console.error('Erro ao carregar draft', e);
+    }
+  }
 }
 
 function generateManifest() {
@@ -98,6 +179,8 @@ function generateManifest() {
     files: []
   };
   document.getElementById('manifest-preview').textContent = JSON.stringify(manifest, null, 2);
+  saveDraft();
+  showToast('Manifesto preliminar atualizado', 'success');
 }
 
 function captureLocation() {
@@ -110,9 +193,12 @@ function captureLocation() {
   navigator.geolocation.getCurrentPosition(position => {
     lastPosition = position;
     target.textContent = `${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)} · ±${Math.round(position.coords.accuracy)} m`;
+    showToast('Coordenadas GPS capturadas.', 'success');
     updateStatus();
+    saveDraft();
   }, error => {
     target.textContent = `GPS não coletado: ${error.message}`;
+    showToast(`Erro no GPS: ${error.message}`, 'error');
   }, {
     enableHighAccuracy: true,
     timeout: 10000,
@@ -136,8 +222,10 @@ async function startQrScan() {
     if (codes.length > 0) {
       document.getElementById('drone-qr').value = codes[0].rawValue;
       document.getElementById('aircraft').value = codes[0].rawValue;
+      showToast('QR Code capturado com sucesso!', 'success');
       stopQrScan();
       updateStatus();
+      saveDraft();
     }
   }, 600);
 }
@@ -159,6 +247,16 @@ function stopQrScan() {
 
 renderChecklist('preflight', preflightItems);
 renderChecklist('postflight', postflightItems);
-document.addEventListener('input', updateStatus);
-document.addEventListener('change', updateStatus);
+
+loadDraft();
+
+document.addEventListener('input', () => {
+  updateStatus();
+  saveDraft();
+});
+document.addEventListener('change', () => {
+  updateStatus();
+  saveDraft();
+});
+
 updateStatus();

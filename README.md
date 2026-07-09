@@ -23,6 +23,8 @@ Ao contrario do MorfoCampo, o DroneOps ja nasce com `CampoSync` no escopo inicia
 - Anexar documentos, autorizacoes, mapas, planos de voo, imagens, logs e relatorios.
 - Registrar ocorrencias, abortagens, falhas, riscos e inconsistencias.
 - Gerar pacote de missao compatvel com CampoSync.
+- Operar nativamente como **PWA** (Progressive Web App) offline em campo.
+- Armazenar dados em banco **SQLite** embutido ou planilhas estaticas.
 
 ## Uso rapido
 
@@ -34,7 +36,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Crie uma missao:
+Crie uma missao (com SQLite):
 
 ```bash
 ./build/droneops init-mission \
@@ -45,14 +47,15 @@ Crie uma missao:
   --mission DO-001 \
   --responsible Operador \
   --aircraft DRONE-001 \
-  --sensor RGB-001
+  --sensor RGB-001 \
+  --db out/demo_DO001/droneops.db
 ```
 
 Valide:
 
 ```bash
 ./build/droneops validate \
-  --input out/demo_DO001/droneops/missoes.csv \
+  --db out/demo_DO001/droneops.db \
   --out out/demo_DO001/validacao
 ```
 
@@ -62,12 +65,15 @@ Gere pacote CampoSync:
 ./build/droneops package \
   --dir out/demo_DO001 \
   --mission DO-001 \
+  --db out/demo_DO001/droneops.db \
   --out out/demo_DO001/pacote
 ```
 
-## Interface web inicial
+> **Nota**: Para uso legado com planilhas `.csv`, basta omitir o argumento `--db` e passar `--input` no `validate`.
 
-Uma primeira tela estatica esta em `web/static/`. Ela desenha o fluxo de missao, checklist, ocorrencias e manifesto preliminar com a identidade visual derivada do MorfoCampo.
+## Interface web PWA
+
+A interface foi evoluida para um **Progressive Web App (PWA)** totalmente dinamico em `web/static/`. Ela desenha o fluxo de missao, checklist, ocorrencias e permite uso completamente offline no celular em campo, salvando rascunhos no dispositivo ate que a conexao retorne.
 
 Servidor local:
 

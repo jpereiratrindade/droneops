@@ -2,7 +2,7 @@
 
 ## Status
 
-Aceita.
+Aceita e **Implementada** (na versão 0.2.0 via `SqliteStore`).
 
 ## Contexto
 
