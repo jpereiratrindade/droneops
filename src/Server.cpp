@@ -132,6 +132,45 @@ void WebServer::setupRoutes() {
         }
     });
 
+    // Fase 5: Upload de Evidências (Fotos Físicas)
+    srv_.Post(R"(/api/missions/(.+)/evidence)", [this](const httplib::Request& req, httplib::Response& res) {
+        std::string id = req.matches[1];
+        try {
+            auto mission = store_.getMission(id);
+            std::filesystem::path fotos_dir = "out/campanha/evidencias/fotos";
+            std::filesystem::create_directories(fotos_dir);
+
+            std::string saved_paths = mission.photo_paths;
+            bool added = false;
+
+            if (req.is_multipart_form_data()) {
+                for (auto it = req.files.find("files"); it != req.files.end(); ++it) {
+                    const auto& file = it->second;
+                    if (file.name == "files") {
+                        std::filesystem::path out_path = fotos_dir / file.filename;
+                        std::ofstream out(out_path, std::ios::binary);
+                        out.write(file.content.data(), file.content.size());
+                        out.close();
+
+                        if (!saved_paths.empty()) saved_paths += ",";
+                        saved_paths += "evidencias/fotos/" + file.filename;
+                        added = true;
+                    }
+                }
+            }
+
+            if (added) {
+                mission.photo_paths = saved_paths;
+                store_.saveMission(mission);
+            }
+            res.set_content(R"({"status": "uploaded"})", "application/json");
+        } catch (const std::exception& e) {
+            res.status = 500;
+            std::string err = std::string(R"({"error": ")") + e.what() + "\"}";
+            res.set_content(err, "application/json");
+        }
+    });
+
     // Fase 4: Empacotamento
     srv_.Post(R"(/api/missions/(.+)/package)", [this](const httplib::Request& req, httplib::Response& res) {
         std::string id = req.matches[1];

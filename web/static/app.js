@@ -167,6 +167,7 @@ async function loadDraft() {
       document.getElementById('evidence').value = data.evidence_paths || '';
       document.getElementById('occurrences').value = data.occurrences || '';
       document.getElementById('final-decision').value = data.final_decision || 'rascunho';
+      const isSynced = (data.sync_status && data.sync_status !== 'nao_sincronizado');
       document.getElementById('sync-status').textContent = (data.sync_status || 'nao_sincronizado').replace('_', ' ');
 
       const pres = document.querySelectorAll('input[data-group="preflight"]');
@@ -176,7 +177,17 @@ async function loadDraft() {
       (data.postflight || []).forEach((checked, i) => { if (posts[i]) posts[i].checked = checked; });
 
       updateStatus();
-      showToast(`Missão ${missionId} carregada do servidor local.`, 'success');
+      
+      if (isSynced) {
+         document.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+         document.querySelectorAll('.btn-ghost').forEach(el => el.style.display = 'none');
+         document.getElementById('photos').disabled = true;
+         showToast(`Missão ${missionId} em modo leitura (já empacotada).`, 'info');
+      } else {
+         document.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+         document.querySelectorAll('.btn-ghost').forEach(el => el.style.display = 'inline-flex');
+         showToast(`Missão ${missionId} carregada do servidor local.`, 'success');
+      }
       
       // Ajuste automático da versão do sistema
       fetch('/api/version').then(v => v.json()).then(vd => {
@@ -222,6 +233,11 @@ async function loadDraft() {
 }
 
 async function generateManifest() {
+  const syncStat = document.getElementById('sync-status').textContent;
+  if(syncStat !== 'nao sincronizado' && syncStat !== 'nao_sincronizado') {
+      return showToast('Missão selada. Edição não permitida.', 'error');
+  }
+
   const status = updateStatus();
   const blocked = status === 'bloqueada';
   saveDraft(); // Garante salvamento no SQLite
@@ -229,13 +245,31 @@ async function generateManifest() {
   const missionId = document.getElementById('mission').value;
   if(!missionId) return showToast('Missão inválida', 'error');
 
-  showToast('Empacotando missão localmente...', 'info');
+  showToast('Enviando fotos e empacotando...', 'info');
+  
+  // Enviar fotos primeiro
+  const photos = document.getElementById('photos').files;
+  if(photos.length > 0) {
+      const fd = new FormData();
+      for(let i = 0; i < photos.length; i++) {
+          fd.append('files', photos[i]);
+      }
+      try {
+          const resImg = await fetch(`/api/missions/${missionId}/evidence`, { method: 'POST', body: fd });
+          if(!resImg.ok) throw new Error('Falha no upload');
+      } catch (e) {
+          return showToast('Erro ao enviar fotos', 'error');
+      }
+  }
+
   try {
     const res = await fetch(`/api/missions/${missionId}/package`, { method: 'POST' });
     if(res.ok) {
       document.getElementById('sync-status').textContent = 'pendente sincronizacao';
-      showToast('Pacote CampoSync gerado e pendente de sincronização.', 'success');
-      document.getElementById('manifest-preview').textContent = "Pacote salvo localmente no dispositivo.";
+      document.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+      document.querySelectorAll('.btn-ghost').forEach(el => el.style.display = 'none');
+      showToast('Pacote CampoSync gerado e lacrado!', 'success');
+      document.getElementById('manifest-preview').textContent = "Pacote selado no dispositivo e bloqueado contra edição.";
     } else {
       throw new Error('Falha no empacotamento');
     }
