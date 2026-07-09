@@ -110,10 +110,79 @@ function saveDraft() {
   localStorage.setItem(`droneops_draft_${missionId}`, JSON.stringify(payload));
   // Save last edited mission id
   localStorage.setItem('droneops_last_mission', missionId);
+
+  // Sincroniza com a API nativa do CampoNode se estivermos online
+  if (navigator.onLine) {
+    syncApi(payload);
+  }
 }
 
-function loadDraft() {
+async function syncApi(payload) {
+  try {
+    const res = await fetch('/api/missions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mission_id: payload.mission,
+        project_id: payload.project,
+        campaign_id: payload.campaign,
+        area_id: payload.area,
+        responsible: payload.responsible,
+        operator_id: payload.operatorId,
+        aircraft_id: payload.aircraft,
+        drone_qr: payload.droneQr,
+        sensor_id: payload.sensor,
+        planned_date: payload.date,
+        evidence_paths: payload.evidence,
+        occurrences: payload.occurrences,
+        final_decision: payload.finalDecision,
+        preflight: payload.preflight,
+        postflight: payload.postflight
+      })
+    });
+    if (!res.ok) throw new Error('API Sync Failed');
+  } catch (e) {
+    console.warn('Falha ao sincronizar com backend C++', e);
+  }
+}
+
+async function loadDraft() {
   const missionId = localStorage.getItem('droneops_last_mission') || 'DO-001';
+  
+  // Tenta carregar do backend nativo primeiro
+  try {
+    const res = await fetch(`/api/missions/${missionId}`);
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('project').value = data.project_id || '';
+      document.getElementById('campaign').value = data.campaign_id || '';
+      document.getElementById('area').value = data.area_id || '';
+      document.getElementById('mission').value = data.mission_id || '';
+      document.getElementById('responsible').value = data.responsible || '';
+      document.getElementById('operator-id').value = data.operator_id || '';
+      document.getElementById('aircraft').value = data.aircraft_id || '';
+      document.getElementById('drone-qr').value = data.drone_qr || '';
+      document.getElementById('sensor').value = data.sensor_id || '';
+      document.getElementById('date').value = data.planned_date || '';
+      document.getElementById('evidence').value = data.evidence_paths || '';
+      document.getElementById('occurrences').value = data.occurrences || '';
+      document.getElementById('final-decision').value = data.final_decision || 'rascunho';
+
+      const pres = document.querySelectorAll('input[data-group="preflight"]');
+      (data.preflight || []).forEach((checked, i) => { if (pres[i]) pres[i].checked = checked; });
+
+      const posts = document.querySelectorAll('input[data-group="postflight"]');
+      (data.postflight || []).forEach((checked, i) => { if (posts[i]) posts[i].checked = checked; });
+
+      updateStatus();
+      showToast(`Missão ${missionId} carregada do servidor local.`, 'success');
+      return;
+    }
+  } catch (e) {
+    console.warn('Backend inativo, tentando localStorage...');
+  }
+
+  // Fallback: localStorage
   const saved = localStorage.getItem(`droneops_draft_${missionId}`);
   if (saved) {
     try {

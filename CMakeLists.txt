@@ -12,6 +12,7 @@ add_library(droneops_core
     src/Package.cpp
     src/Validator.cpp
     src/Sqlite.cpp
+    src/Server.cpp
 )
 
 include(FetchContent)
@@ -29,7 +30,21 @@ add_library(sqlite3_static STATIC
 )
 target_include_directories(sqlite3_static PUBLIC ${sqlite3_SOURCE_DIR})
 
-target_link_libraries(droneops_core PUBLIC sqlite3_static)
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+)
+FetchContent_MakeAvailable(json)
+
+FetchContent_Declare(
+    httplib
+    URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.15.3.tar.gz
+    URL_HASH SHA256=2121bbf38871bb2aafb5f7f2b9b94705366170909f434428352187cb0216124e
+)
+FetchContent_MakeAvailable(httplib)
+
+target_link_libraries(droneops_core PUBLIC sqlite3_static nlohmann_json::nlohmann_json httplib::httplib)
 
 target_include_directories(droneops_core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include

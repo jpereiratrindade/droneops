@@ -69,17 +69,27 @@ Gere pacote CampoSync:
   --out out/demo_DO001/pacote
 ```
 
+Inicie o Servidor Web Integrado:
+
+```bash
+./build/droneops serve \
+  --db out/demo_DO001/droneops.db \
+  --web web/static \
+  --port 8011
+```
+
 > **Nota**: Para uso legado com planilhas `.csv`, basta omitir o argumento `--db` e passar `--input` no `validate`.
 
-## Interface web PWA
+## Interface web PWA e Servidor Integrado
 
 A interface foi evoluida para um **Progressive Web App (PWA)** totalmente dinamico em `web/static/`. Ela desenha o fluxo de missao, checklist, ocorrencias e permite uso completamente offline no celular em campo, salvando rascunhos no dispositivo ate que a conexao retorne.
 
-Servidor local:
+O DroneOps agora conta com um **Servidor Web C++ embutido** (via `cpp-httplib` e `nlohmann/json`). Nao e mais necessario usar Python. O binario serve os arquivos estaticos e expoe uma **API REST** nativa (`GET/POST /api/missions`) conectada diretamente ao SQLite.
+
+Servidor integrado:
 
 ```bash
-cd web
-python3 -m http.server 8011
+./build/droneops serve --db out/demo_DO001/droneops.db --web web/static --port 8011
 ```
 
 Abra:
