@@ -104,3 +104,9 @@ http://127.0.0.1:8011/
 - Declarar conformidade legal automatica.
 - Controlar fisicamente aeronave ou executar voo.
 - Depender de internet para registrar a missao em campo.
+
+## Premissas de desenvolvimento
+
+**Simples, leve. Sempre pronto. Sempre incompleto!**
+
+[Significado e símbolos das premissas](docs/sister-principles/README.md).
